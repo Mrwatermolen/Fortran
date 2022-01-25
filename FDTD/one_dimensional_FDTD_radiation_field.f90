@@ -21,8 +21,9 @@ program one_dimensional_FDTD_radiation_field
     alpha = (c * delta_t - delta_z) / (c * delta_t + delta_z)
     ! open(1,file='electric_field.dat')
     ! open(2,file='magnetic_field.dat')
-    open(3,file='electric_field_while_delta_t_200.dat')
-    open(4,file='magnetric_field_while_delta_t_400.dat')
+    open(6,file='electric_field_FDTD_solution_while_step_t_400.dat')
+    open(7,file='electric_field_analytic_solution_while_step_t_400.dat')
+    open(8,file='compare_analytic_solution_and_FDTD_solution_while_step_t_400.dat')
 
     ! 赋初值
     do i = 0, step
@@ -68,17 +69,29 @@ program one_dimensional_FDTD_radiation_field
     !         write(2,*)z, Hy(z,t)
     !     end do
     ! end do
-    ! t=200*delta_t时的Ex数据
     do z = 0, step
-        write(3,*)z, Ex(z,200)
-        write(4,*)z, Hy(z,400)
+        write(6, *)z, Ex(z, 400) ! t=400*delta_t时的由FDTD解出的Ex
+        temp = electric_field_analytic_solution(400.0 * delta_t, z * delta_z, c) ! t=400*delta_t时的由解析解解出的Ex
+        write(7, *)z, temp
+        write(8, *)z, Ex(z, 400), temp
     end do
+    
 end program one_dimensional_FDTD_radiation_field
 
 !电流源
 function current_source(t)
     real pi, current_source, t
     pi = 3.14
-    current_source = cos( 2 * pi * 3 * 1e8 *t )
+    current_source = cos(2 * pi * 3 * 1e8 * t)
+    return
+end
+
+!由解析式求得的精确解
+function electric_field_analytic_solution(t, z, v)
+    real pi, impedance, electric_field_analytic_solution, t, z, v
+    external current_source
+    pi = 3.14
+    impedance = 120.0 * pi !波阻抗
+    electric_field_analytic_solution = (impedance / 2) * current_source(t - z / v)
     return
 end
