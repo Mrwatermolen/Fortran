@@ -19,11 +19,6 @@ program one_dimensional_FDTD_radiation_field
     cp = 1.0
     cq = (delta_t) / (mu_0 * delta_z)
     alpha = (c * delta_t - delta_z) / (c * delta_t + delta_z)
-    ! open(1,file='electric_field.dat')
-    ! open(2,file='magnetic_field.dat')
-    open(6,file='electric_field_FDTD_solution_while_step_t_400.dat')
-    open(7,file='electric_field_analytic_solution_while_step_t_400.dat')
-    open(8,file='compare_analytic_solution_and_FDTD_solution_while_step_t_400.dat')
 
     ! 赋初值
     do i = 0, step
@@ -36,39 +31,28 @@ program one_dimensional_FDTD_radiation_field
     ! 主体
     do t = 1, step
         ! 先计算Ex
-        do z = 0, step
+        do z = 1, step
+            Ex(z,t) = Ex(z, t - 1) - cb * ( Hy(z, t - 1) - Hy(z - 1, t - 1) )
+            ! 处理元胞包含电流源时
             if ( z == source_z ) then
-                ! 处理元胞包含电流源时
-                Ex(z,t) = ca * Ex(z, t - 1) - cb * ( Hy(z, t - 1) - Hy(z - 1, t - 1) ) &
-                - cb * current_source( (t + 0.5) * delta_t )
-            else if ( z == 0 ) then
-                ! 处理边界 Mur一阶近似吸收左边界
-                Ex(0, t) = Ex(1, t - 1) + alpha * ( Ex(1, t) - Ex(0, t - 1) )
-            else if ( z == step ) then
-                ! 处理边界 Mur一阶近似吸收右边界
-                Ex(step, t) = Ex(step - 1, t - 1) + alpha * ( Ex(step - 1, t) - Ex(step, t - 1) )
-            else
-                Ex(z,t) = ca * Ex(z, t - 1) - cb * ( Hy(z, t - 1) - Hy(z - 1, t - 1) )
+                
+                Ex(z,t) = Ex(z,t) - cb * current_source( (t + 0.5) * delta_t )                
             end if
         end do
-        ! Hy分量 z = 0时 Hy(z + 1/2)的计算不涉及截断边界以外的计算， Hy仅仅需计算到第step个元胞  ，因为第step + 1元胞已经超出了截断边界。Hy的划分为z+1/2
+        ! Hy分量 z = 0时 Hy(z + 1/2)的计算不涉及截断边界以外的计算
         do z = 0, step - 1
             Hy(z,t) = cp * Hy(z, t - 1) - cq * ( Ex(z + 1, t) - Ex(z, t) )
         end do
-
-        !Hy(0, t) = Hy(1, t - 1) + alpha * ( Hy(1, t) - Hy(0, t - 1) )
-        !Hy(step, t) = Hy(step - 1, t - 1) + alpha * ( Hy(step - 1, t) - Hy(step, t - 1) )
+        ! 处理边界 Mur一阶近似吸收左边界
+        Ex(0, t) = Ex(1, t - 1) + alpha * ( Ex(1, t) - Ex(0, t - 1) )
+        ! 处理边界 Mur一阶近似吸收右边界
+        Hy(step,t) = Hy(step - 1, t - 1) + alpha * ( Hy(step - 1, t) - Hy(step, t - 1) )
     end do
     
     ! 数据整理
-    ! do t = 0, step
-    !     write(1,*)"*************************", t, "*************************"
-    !     write(2,*)"*************************", t, "*************************"
-    !     do z = 0, step
-    !         write(1,*)z, Ex(z,t)
-    !         write(2,*)z, Hy(z,t)
-    !     end do
-    ! end do
+    open(6,file='electric_field_FDTD_solution_while_step_t_400.dat')
+    open(7,file='electric_field_analytic_solution_while_step_t_400.dat')
+    open(8,file='compare_analytic_solution_and_FDTD_solution_while_step_t_400.dat')
     do z = 0, step
         write(6, *)z, Ex(z, 400) ! t=400*delta_t时的由FDTD解出的Ex
         temp = electric_field_analytic_solution(400.0 * delta_t, z * delta_z, c) ! t=400*delta_t时的由解析解解出的Ex
