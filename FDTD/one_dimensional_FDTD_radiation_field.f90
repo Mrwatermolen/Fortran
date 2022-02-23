@@ -1,6 +1,7 @@
 program one_dimensional_FDTD_radiation_field
     ! 平面电流源的辐射场分布，边界采用Mur一阶近似吸收边界
     ! 场源位于z=250处，为xoy平面，源为一时谐源：cos(2*pi*3*1e8*t)，区域为真空
+    ! z = 0， 500 * deltaZ处采用一阶吸收边界
     real mu_0, epsilon_0, pi, c, delta_z, delta_t, ca, cb, cp, cq, alpha
     real Ex(0:500,0:500), Hy(0:500,0:500) !(z,t)
     integer step, source_z, t, z
@@ -30,23 +31,21 @@ program one_dimensional_FDTD_radiation_field
 
     ! 主体
     do t = 1, step
-        ! 先计算Ex
-        do z = 1, step
+        ! 先计算非截断边界处的Ex
+        do z = 1, step - 1
             Ex(z,t) = Ex(z, t - 1) - cb * ( Hy(z, t - 1) - Hy(z - 1, t - 1) )
             ! 处理元胞包含电流源时
-            if ( z == source_z ) then
-                
+            if ( z == source_z ) then                
                 Ex(z,t) = Ex(z,t) - cb * current_source( (t + 0.5) * delta_t )                
             end if
         end do
+        ! 处理边界 Mur一阶近似吸收边界
+        Ex(0, t) = Ex(1, t - 1) + alpha * ( Ex(1, t) - Ex(0, t - 1) )
+        Ex(step, t) = Ex(step - 1, t - 1) + alpha * ( Ex(step - 1, t) - Ex(step, t - 1) )
         ! Hy分量 z = 0时 Hy(z + 1/2)的计算不涉及截断边界以外的计算
         do z = 0, step - 1
             Hy(z,t) = cp * Hy(z, t - 1) - cq * ( Ex(z + 1, t) - Ex(z, t) )
         end do
-        ! 处理边界 Mur一阶近似吸收左边界
-        Ex(0, t) = Ex(1, t - 1) + alpha * ( Ex(1, t) - Ex(0, t - 1) )
-        ! 处理边界 Mur一阶近似吸收右边界
-        Hy(step,t) = Hy(step - 1, t - 1) + alpha * ( Hy(step - 1, t) - Hy(step, t - 1) )
     end do
     
     ! 数据整理
